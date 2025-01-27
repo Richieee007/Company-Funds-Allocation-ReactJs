@@ -2,76 +2,105 @@ import React, { createContext, useReducer } from 'react';
 
 // 5. The reducer - this is used to update the state, based on the action
 export const AppReducer = (state, action) => {
-    let budget = 0;
+    // eslint-disable-next-line
+    let budget = 0; // Initialize budget
     switch (action.type) {
         case 'ADD_EXPENSE':
             let total_budget = 0;
+
+            // Calculate the total budget by summing up all expenses
             total_budget = state.expenses.reduce(
                 (previousExp, currentExp) => {
-                    return previousExp + currentExp.cost
-                },0
+                    return previousExp + currentExp.cost;
+                }, 0
             );
             total_budget = total_budget + action.payload.cost;
-            action.type = "DONE";
-            if(total_budget <= state.budget) {
-                total_budget = 0;
-                state.expenses.map((currentExp)=> {
-                    if(currentExp.name === action.payload.name) {
-                        currentExp.cost = action.payload.cost + currentExp.cost;
-                    }
-                    return currentExp
-                });
-                return {
-                    ...state,
-                };
-            } else {
-                alert("Cannot increase the allocation! Out of funds");
-                return {
-                    ...state
-                }
-            }
-            case 'RED_EXPENSE':
-                const red_expenses = state.expenses.map((currentExp)=> {
-                    if (currentExp.name === action.payload.name && currentExp.cost - action.payload.cost >= 0) {
-                        currentExp.cost =  currentExp.cost - action.payload.cost;
-                        budget = state.budget + action.payload.cost
-                    }
-                    return currentExp
-                })
-                action.type = "DONE";
-                return {
-                    ...state,
-                    expenses: [...red_expenses],
-                };
-            case 'DELETE_EXPENSE':
-            action.type = "DONE";
-            state.expenses.map((currentExp)=> {
-                if (currentExp.name === action.payload) {
-                    budget = state.budget + currentExp.cost
-                    currentExp.cost =  0;
-                }
-                return currentExp
-            })
-            action.type = "DONE";
-            return {
-                ...state,
-                budget
-            };
-        case 'SET_BUDGET':
-            action.type = "DONE";
-            state.budget = action.payload;
 
+            // Check if the total budget is within the allowed budget
+            if (total_budget <= state.budget) {
+                total_budget = 0;
+
+                // Check if the department already exists
+                const existingExpense = state.expenses.find(
+                    (currentExp) => currentExp.name === action.payload.name
+                );
+
+                // If the department exists, update the cost
+                if (existingExpense) {
+                    const updatedExpenses = state.expenses.map((currentExp) => {
+                        if (currentExp.name === action.payload.name) {
+                            currentExp.cost = action.payload.cost + currentExp.cost;
+                        }
+                        return currentExp;
+                    });
+                    return {
+                        ...state,
+                        expenses: updatedExpenses, // Return updated expenses list
+                    };
+                } else {
+                    // If the department does not exist, add a new one
+                    return {
+                        ...state,
+                        expenses: [
+                            ...state.expenses,
+                            {
+                                id: action.payload.name, // Use the name as the ID
+                                name: action.payload.name, // Department name
+                                cost: action.payload.cost, // Allocated cost
+                            },
+                        ],
+                    };
+                }
+            } else {
+                alert('Cannot increase the allocation! Out of funds'); // Alert when over budget
+                return {
+                    ...state, // Return current state if over budget
+                };
+            }
+
+        case 'RED_EXPENSE':
+            // Reduce the allocation for the specified department
+            const red_expenses = state.expenses.map((currentExp) => {
+                if (
+                    currentExp.name === action.payload.name &&
+                    currentExp.cost - action.payload.cost >= 0
+                ) {
+                    currentExp.cost = currentExp.cost - action.payload.cost; // Deduct cost
+                    budget = state.budget + action.payload.cost; // Adjust remaining budget
+                }
+                return currentExp; // Return the updated expense
+            });
             return {
                 ...state,
+                expenses: [...red_expenses], // Return updated expenses list
             };
-        case 'CHG_CURRENCY':
-            action.type = "DONE";
-            state.currency = action.payload;
+
+        case 'DELETE_EXPENSE':
+            // Delete the selected department's expense
+            const updatedExpenses = state.expenses.filter(
+                (currentExp) => currentExp.name !== action.payload
+            );
             return {
-                ...state
-            }
+                ...state,
+                expenses: updatedExpenses, // Return updated expenses list without the deleted item
+            };
+
+        case 'SET_BUDGET':
+            // Update the budget value
+            return {
+                ...state,
+                budget: action.payload, // New budget value
+            };
+
+        case 'CHG_CURRENCY':
+            // Change the currency
+            return {
+                ...state,
+                currency: action.payload, // New currency
+            };
 
         default:
+            // Return the current state for unknown actions
             return state;
     }
 };
